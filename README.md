@@ -3,10 +3,6 @@
 **Öğrenci:** Hikmet Emre Gültekin (2516016024)  
 **Öğretim Elemanı:** Öğr. Gör. Osman Can Çetlenbik  
 
----
-
-### 📌 CV Başarı Cümlesi
-> "URLhaus açık tehdit istihbaratı verileri üzerinden 642 düğümlü üç parçalı (Alan Adı ↔ IP ↔ ASN) oltalama ağını modelledim; Louvain topluluk tespiti ve Erdös-Rényi null model karşılaştırmasıyla (Z-skoru: 4.82) saldırgan altyapılarının rastlantısal olmayan kampanya kümelerini ortaya çıkardım."
 
 ---
 
