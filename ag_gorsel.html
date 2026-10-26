@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oltalama Altyapısı - Etkileşimli Ağ Grafiği</title>
+    <!-- Cytoscape.js Kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; overflow: hidden; display: flex; height: 100vh; }
+        #cy { flex: 1; height: 100vh; background-color: #0b0f19; }
+        #sidebar { width: 340px; background: #1e293b; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        h2 { font-size: 1.1rem; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        .search-box input { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; }
+        .legend { font-size: 0.8rem; background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; }
+        .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .detail-card { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; font-size: 0.85rem; }
+        .detail-card strong { color: #38bdf8; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; background: #0284c7; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="cy"></div>
+
+    <div id="sidebar">
+        <h2>🌐 Oltalama Tehdit Ağı</h2>
+        <p style="font-size: 0.8rem; color: #94a3b8;">
+            <strong>Hikmet Emre Gültekin (2516016024)</strong><br>
+            Üç Parçalı Ağ: Alan Adı &harr; IP &harr; ASN
+        </p>
+
+        <div class="search-box">
+            <input type="text" id="nodeSearch" placeholder="Düğüm ara (örn: AS_1000, 185...)">
+        </div>
+
+        <div class="legend">
+            <strong>Düğüm Türleri:</strong>
+            <div class="legend-item" style="margin-top: 6px;"><div class="dot" style="background: #f43f5e;"></div> Oltalama Alan Adı (Domain)</div>
+            <div class="legend-item"><div class="dot" style="background: #38bdf8;"></div> Sunucu IP Adresi</div>
+            <div class="legend-item"><div class="dot" style="background: #10b981;"></div> Barındırıcı Otonom Sistem (ASN)</div>
+        </div>
+
+        <div id="detailPanel" class="detail-card">
+            <em>Ağ üzerinde bir düğüme tıklayarak bağlantı derecesini ve detaylarını görüntüleyin.</em>
+        </div>
+
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: auto;">
+            Sosyal Ağ Analizi Dersi · Etkileşimli Graf Bileşeni
+        </div>
+    </div>
+
+    <script>
+        const elements = [
+            // ASN Düğümleri
+            { data: { id: 'AS_1000', label: 'AS_1000_CloudHost', type: 'asn' } },
+            { data: { id: 'AS_1001', label: 'AS_1001_FastTransit', type: 'asn' } },
+            { data: { id: 'AS_1002', label: 'AS_1002_GlobalHost', type: 'asn' } },
+
+            // IP Düğümleri
+            { data: { id: 'IP_1', label: '185.193.12.1', type: 'ip' } },
+            { data: { id: 'IP_2', label: '185.193.12.2', type: 'ip' } },
+            { data: { id: 'IP_3', label: '185.193.12.3', type: 'ip' } },
+            { data: { id: 'IP_4', label: '185.193.12.4', type: 'ip' } },
+
+            // Domain Düğümleri
+            { data: { id: 'D1', label: 'login-verify-account-1.com', type: 'domain' } },
+            { data: { id: 'D2', label: 'login-verify-account-2.com', type: 'domain' } },
+            { data: { id: 'D3', label: 'ziraat-guvenli-bakiye.net', type: 'domain' } },
+            { data: { id: 'D4', label: 'e-devlet-kapisi-onay.com', type: 'domain' } },
+            { data: { id: 'D5', label: 'ptt-kargo-teslimat.com', type: 'domain' } },
+            { data: { id: 'D6', label: 'fatura-odeme-portal.org', type: 'domain' } },
+
+            // Kenarlar: Domain <-> IP
+            { data: { source: 'D1', target: 'IP_1' } },
+            { data: { source: 'D2', target: 'IP_1' } },
+            { data: { source: 'D3', target: 'IP_2' } },
+            { data: { source: 'D4', target: 'IP_2' } },
+            { data: { source: 'D5', target: 'IP_3' } },
+            { data: { source: 'D6', target: 'IP_4' } },
+
+            // Kenarlar: IP <-> ASN
+            { data: { source: 'IP_1', target: 'AS_1000' } },
+            { data: { source: 'IP_2', target: 'AS_1000' } },
+            { data: { source: 'IP_3', target: 'AS_1001' } },
+            { data: { source: 'IP_4', target: 'AS_1002' } }
+        ];
+
+        const cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'label': 'data(label)',
+                        'color': '#cbd5e1',
+                        'font-size': '10px',
+                        'text-valign': 'bottom',
+                        'text-margin-y': 5
+                    }
+                },
+                { selector: 'node[type="domain"]', style: { 'background-color': '#f43f5e', 'width': 18, 'height': 18 } },
+                { selector: 'node[type="ip"]', style: { 'background-color': '#38bdf8', 'width': 26, 'height': 26 } },
+                { selector: 'node[type="asn"]', style: { 'background-color': '#10b981', 'width': 38, 'height': 38 } },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 1.5,
+                        'line-color': '#475569',
+                        'curve-style': 'bezier',
+                        'opacity': 0.6
+                    }
+                },
+                {
+                    selector: ':selected',
+                    style: {
+                        'border-width': 3,
+                        'border-color': '#facc15',
+                        'line-color': '#facc15'
+                    }
+                }
+            ],
+            layout: { name: 'cose', animate: false, padding: 30 }
+        });
+
+        // Tıklama Olayı (Detay Paneli)
+        cy.on('tap', 'node', function(evt){
+            const node = evt.target;
+            const data = node.data();
+            const degree = node.degree();
+            
+            let typeTr = data.type === 'domain' ? 'Oltalama Alan Adı' : (data.type === 'ip' ? 'Barındırıcı IP' : 'Otonom Sistem (ASN)');
+            
+            document.getElementById('detailPanel').innerHTML = `
+                <strong style="font-size: 1rem;">${data.label}</strong><br>
+                <span class="badge">${typeTr}</span>
+                <hr style="border: 0; border-top: 1px solid #334155; margin: 8px 0;">
+                <strong>Derece (Bağlantı):</strong> ${degree}<br>
+                <strong>Düğüm ID:</strong> <code>${data.id}</code><br>
+                <p style="margin-top: 6px; font-size: 0.8rem; color: #94a3b8;">
+                    ${data.type === 'asn' ? 'Orantısız rol oynayan kritik omurga sağlayıcısı.' : 'Ağ altyapısında paylaşılan aktif kampanya düğümü.'}
+                </p>
+            `;
+        });
+
+        // Arama Kutusu Filtresi
+        document.getElementById('nodeSearch').addEventListener('input', function(e){
+            const val = e.target.value.toLowerCase().trim();
+            if(!val) {
+                cy.elements().style('opacity', 1);
+                return;
+            }
+            cy.elements().style('opacity', 0.15);
+            const matches = cy.nodes().filter(n => n.data('label').toLowerCase().includes(val));
+            matches.style('opacity', 1);
+            matches.connectedEdges().style('opacity', 0.8);
+            matches.connectedEdges().connectedNodes().style('opacity', 0.8);
+        });
+    </script>
+</body>
+</html>
